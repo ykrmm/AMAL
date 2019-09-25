@@ -1,6 +1,9 @@
-import torch 
-#import torch.nn.Function
-
+import torch
+import torch.utils.data as data
+from torch.utils.data.sampler import SubsetRandomSampler # utile pour split train test 
+import torchvision
+from torch.utils.tensorboard import SummaryWriter
+from torchvision import datasets, transforms
 
 # y = x.w.T
 # z = (y-y_pred)**2
@@ -83,14 +86,14 @@ class Fianso(torch.nn.Module): # Méthode de régression linéaire simple
 
 
 
-
+# Utilisation d'un optimiseur
 
 criterion = torch.nn.MSELoss()
 learning_rate = 10e-3
 model = Fianso(x.size()[1],x.size()[0])
 optimizer = torch.optim.Adam(model.parameters(),lr=learning_rate)
 
-for i in range(1000):
+for i in range(1000 ):
 
     model.train()
     pred = model(x)
@@ -101,4 +104,84 @@ for i in range(1000):
     loss.backward()
     optimizer.step()
     optimizer.zero_grad()
+
+
+
+# Test d'un réseau à deux couches (Perceval) sur les données boston housing 
+
+
+class Boston_Dataset(data.Dataset):
+    def __init__(self,file_path="/Users/ykarmim/Documents/Cours/Master/M2/AMAL/TME/tme1/housing.data"):
+        data_ = []                                                                                                                                                                           
+        labels_ = []
+        lineList = [line.rstrip('\n') for line in open(file_path)]                                                                                                                               
+
+        for i in range(len(lineList)): 
+            lineList[i] = lineList[i].strip() 
+            lineList[i] = ' '.join(lineList[i].split()) 
+            data_.append(lineList[i].split(' '))
+        for i,d in enumerate(data_) :
+            labels_.append(float(d[len(d)-1]))
+            data_[i] = [float(s) for s in d[:-1]] 
+        self.data = torch.Tensor(data_)
+        self.labels = torch.Tensor(labels_)
+        
+    def __getitem__(self,index):
+        return self.data[index],self.labels[index]
+
+    def __len__(self):
+        return len(self.labels)
+    
+
+
+
+class Perceval(torch.nn.Module):
+    def __init__(self,D_in,H,D_out):
+        super(Perceval,self).__init__()
+        self.linear1 = torch.nn.Linear(D_in,H)
+        self.linear2 = torch.nn.Linear(H,D_out)
+        self.activ1 = torch.nn.ReLU()
+        self.activ = torch.nn.Softmax()
+
+    def forward(self,x):
+
+        y = self.linear1(x)
+
+        y = self.activ1(y)
+
+        y = self.linear2(y)#.squeeze()
+
+        y = self.activ(y)
+
+        return y 
+
+batch_size = 20
+n_epoch = 200
+learning_rate = 10e-5
+dataset = Boston_Dataset()
+dataloader = data.DataLoader(dataset,batch_size=batch_size) # On peut ajouter un paramètre batch_size = 
+
+# Script entrainement model perceval 
+
+model = Perceval(D_in=13,H=2,D_out=1)
+criterion = torch.nn.MSELoss()
+optimizer = torch.optim.Adam(model.parameters(),lr=learning_rate)
+
+
+print(" ------------ ENTRAINEMENT RESEAU DE NEURONES ---------------")
+for ep in range(n_epoch):
+    print("EPOCHS : ",ep)
+    for i, (x, y) in enumerate(dataloader):
+        model.train()
+        y = y#.float()
+        x = x#.double()
+        
+        pred = model(x)
+        #print(pred)
+        loss = criterion(pred, y)
+        print('loss', loss)
+        loss.backward()
+        optimizer.step()
+        optimizer.zero_grad()
+
 
