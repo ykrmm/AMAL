@@ -6,7 +6,27 @@ from torch.autograd import Function
 from torch.autograd import gradcheck
 from datamaestro import prepare_dataset 
 
+class Boston_Dataset(data.Dataset):
+    def __init__(self,file_path="/Users/ykarmim/Documents/Cours/Master/M2/AMAL/TME/tme1/housing.data"):
+        data_ = []                                                                                                                                                                           
+        labels_ = []
+        lineList = [line.rstrip('\n') for line in open(file_path)]                                                                                                                               
 
+        for i in range(len(lineList)): 
+            lineList[i] = lineList[i].strip() 
+            lineList[i] = ' '.join(lineList[i].split()) 
+            data_.append(lineList[i].split(' '))
+        for i,d in enumerate(data_) :
+            labels_.append(float(d[len(d)-1]))
+            data_[i] = [float(s) for s in d[:-1]] 
+        self.data = torch.Tensor(data_)
+        self.labels = torch.Tensor(labels_)
+        
+    def __getitem__(self,index):
+        return self.data[index],self.labels[index]
+
+    def __len__(self):
+        return len(self.labels)
 
 
 

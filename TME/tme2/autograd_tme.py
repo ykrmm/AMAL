@@ -15,9 +15,9 @@ from torchvision import datasets, transforms
 # with torch.no_grad(): (utile pour le test car on a pas  besoin du gradient)
 #       Spécifie qu'on utilise plus de gradient a partir de là 
 
-
 device = torch.device('cpu')
 dtype = torch.float
+"""
 a = torch.rand((1,10),requires_grad=True)
 b = torch.rand((1,10),requires_grad=True)
 c = a.mm(b.t())
@@ -28,7 +28,7 @@ print(d.grad) # Rien : le gradient par rapport à d n’est pas conservé
 print(c.grad) # Celui-ci est conservé
 print(a.grad) ## gradient de c par rapport à a qui est une feuille
 print(b.grad) ## gradient de c par rapport à b qui est une feuille
-
+"""
 
 
 
@@ -139,9 +139,10 @@ class Perceval(torch.nn.Module):
     def __init__(self,D_in,H,D_out):
         super(Perceval,self).__init__()
         self.linear1 = torch.nn.Linear(D_in,H)
-        self.linear2 = torch.nn.Linear(H,D_out)
-        self.activ1 = torch.nn.ReLU()
-        self.activ = torch.nn.Softmax()
+        self.linear2 = torch.nn.Linear(H,H)
+        self.linear3 = torch.nn.Linear(H,D_out)
+        self.activ1 = torch.nn.Tanh()
+        
 
     def forward(self,x):
 
@@ -151,19 +152,22 @@ class Perceval(torch.nn.Module):
 
         y = self.linear2(y)#.squeeze()
 
-        y = self.activ(y)
+        y = self.activ1(y)
+
+        y = self.linear3(y)
+        
 
         return y 
 
-batch_size = 20
-n_epoch = 200
-learning_rate = 10e-5
+#batch_size = 20
+n_epoch = 300
+learning_rate = 10e-4
 dataset = Boston_Dataset()
-dataloader = data.DataLoader(dataset,batch_size=batch_size) # On peut ajouter un paramètre batch_size = 
+dataloader = data.DataLoader(dataset,shuffle=True) # On peut ajouter un paramètre batch_size = 
 
 # Script entrainement model perceval 
 
-model = Perceval(D_in=13,H=2,D_out=1)
+model = Perceval(D_in=13,H=5,D_out=1)
 criterion = torch.nn.MSELoss()
 optimizer = torch.optim.Adam(model.parameters(),lr=learning_rate)
 
@@ -179,9 +183,13 @@ for ep in range(n_epoch):
         pred = model(x)
         #print(pred)
         loss = criterion(pred, y)
-        print('loss', loss)
+        print('loss', loss ," Prédiction : ", pred, "y True : ",y)
         loss.backward()
         optimizer.step()
         optimizer.zero_grad()
 
-
+# à faire : standardisation des données : -mean/std sur le train et sur les ypred du train
+#                                           en test utilisé les moyennes et ecart types calculés dans le train
+# dropout
+# Split train/test
+print("-------------------- TEST DU RESEAU DE NEURONES --------------")
