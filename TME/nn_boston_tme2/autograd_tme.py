@@ -1,3 +1,4 @@
+import numpy as np
 import torch
 import torch.utils.data as data
 from torch.utils.data.sampler import SubsetRandomSampler # utile pour split train test 
@@ -107,11 +108,11 @@ for i in range(1000 ):
 
 
 
-# Test d'un réseau à deux couches (Perceval) sur les données boston housing 
+# Test d'un réseau à trois couches (Perceval) sur les données boston housing 
 
 
 class Boston_Dataset(data.Dataset):
-    def __init__(self,file_path="/Users/ykarmim/Documents/Cours/Master/M2/AMAL/TME/tme1/housing.data"):
+    def __init__(self,file_path="/Users/ykarmim/Documents/Cours/Master/M2/AMAL/TME/backward_tme1/housing.data"):
         data_ = []                                                                                                                                                                           
         labels_ = []
         lineList = [line.rstrip('\n') for line in open(file_path)]                                                                                                                               
@@ -159,11 +160,37 @@ class Perceval(torch.nn.Module):
 
         return y 
 
-#batch_size = 20
-n_epoch = 300
+
+batch_size = 20
+shuffle_dataset = True
+validation_split = .2
+random_seed = 42
+
+n_epoch = 500
 learning_rate = 10e-4
 dataset = Boston_Dataset()
-dataloader = data.DataLoader(dataset,shuffle=True) # On peut ajouter un paramètre batch_size = 
+dataloader = data.DataLoader(dataset,shuffle=shuffle_dataset,batch_size=batch_size) 
+
+
+# Split train/test 
+
+# Creating data indices for training and validation splits:
+dataset_size = len(dataset)
+indices = list(range(dataset_size))
+split = int(np.floor(validation_split * dataset_size))
+if shuffle_dataset :
+    np.random.seed(random_seed)
+    np.random.shuffle(indices)
+train_indices, val_indices = indices[split:], indices[:split]
+
+# Creating PT data samplers and loaders:
+train_sampler = SubsetRandomSampler(train_indices)
+valid_sampler = SubsetRandomSampler(val_indices)
+
+train_loader = torch.utils.data.DataLoader(dataset, batch_size=batch_size, 
+                                           sampler=train_sampler)
+validation_loader = torch.utils.data.DataLoader(dataset, batch_size=len(val_indices),
+                                                sampler=valid_sampler)
 
 # Script entrainement model perceval 
 
@@ -171,11 +198,13 @@ model = Perceval(D_in=13,H=5,D_out=1)
 criterion = torch.nn.MSELoss()
 optimizer = torch.optim.Adam(model.parameters(),lr=learning_rate)
 
+writer = SummaryWriter()
+
 
 print(" ------------ ENTRAINEMENT RESEAU DE NEURONES ---------------")
 for ep in range(n_epoch):
     print("EPOCHS : ",ep)
-    for i, (x, y) in enumerate(dataloader):
+    for i, (x, y) in enumerate(train_loader):
         model.train()
         y = y#.float()
         x = x#.double()
@@ -184,6 +213,7 @@ for ep in range(n_epoch):
         #print(pred)
         loss = criterion(pred, y)
         print('loss', loss ," Prédiction : ", pred, "y True : ",y)
+        writer.add_scalar('Loss/train', loss, ep)
         loss.backward()
         optimizer.step()
         optimizer.zero_grad()
@@ -193,3 +223,12 @@ for ep in range(n_epoch):
 # dropout
 # Split train/test
 print("-------------------- TEST DU RESEAU DE NEURONES --------------")
+
+
+for ep in range(n_epoch):
+    for i,(x,y) in enumerate(validation_loader):
+
+        pred = model(x)
+        loss = criterion(pred,y)
+        print('loss', loss ," Prédiction : ", pred, "y True : ",y)
+        writer.add_scalar('Loss/validation', loss, ep)
