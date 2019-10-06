@@ -33,78 +33,74 @@ print(b.grad) ## gradient de c par rapport à b qui est une feuille
 
 
 
-#with torch.no_grad():
-#   c = a.mm(b.t())
-#    c.backward() ## Erreur
+# #with torch.no_grad():
+# #   c = a.mm(b.t())
+# #    c.backward() ## Erreur
 
 
-# Examples  Descente de gradient simple: 
+# # Examples  Descente de gradient simple: 
 
-x = torch.randn((1,10),requires_grad=True,dtype=dtype,device=device)
-y = torch.randint(0,2,size=(1,),dtype=dtype,device=device)
+# x = torch.randn((1,10),requires_grad=True,dtype=dtype,device=device)
+# y = torch.randint(0,2,size=(1,),dtype=dtype,device=device)
 
-w = torch.randn((1,10),requires_grad=True,dtype=dtype,device=device)   
+# w = torch.randn((1,10),requires_grad=True,dtype=dtype,device=device)   
 
 
-learning_rate = 10e-3
+# learning_rate = 10e-3
 
-for i in range(200):
+# for i in range(200):
 
-    y_pred = x.mm(w.T)
-    mse = (y_pred-y).pow(2)
-    mse.backward()
+#     y_pred = x.mm(w.T)
+#     mse = (y_pred-y).pow(2)
+#     mse.backward()
      
-    print("y predit :",y_pred," y_true :",y, "Loss : ",mse)
-    with torch.no_grad():
-        w -=  learning_rate*w.grad
-
-        # On remet le gradient à 0 pour le recalcul 
-
-        w.grad.zero_()
+#     print("y predit :",y_pred," y_true :",y, "Loss : ",mse)
+#     with torch.no_grad():
+#         w -=  learning_rate*w.grad
+#         # On remet le gradient à 0 pour le recalcul 
+#         w.grad.zero_()
 
 
 
+# # Même tâche mais avec le module
 
 
-# Même tâche mais avec le module
+# x = torch.randn((1,10),requires_grad=True,dtype=dtype,device=device)
+# y = torch.randint(0,2,size=(1,),dtype=dtype,device=device)
 
 
-x = torch.randn((1,10),requires_grad=True,dtype=dtype,device=device)
-y = torch.randint(0,2,size=(1,),dtype=dtype,device=device)
+# class Fianso(torch.nn.Module): # Méthode de régression linéaire simple 
+#     def __init__(self,D_in,D_out):
+#         super(Fianso,self).__init__()
+#         self.linear = torch.nn.Linear(D_in,D_out)
+#         #self.activ = 
+#     def forward(self,x):
 
+#         y = self.linear(x)
 
-class Fianso(torch.nn.Module): # Méthode de régression linéaire simple 
-    def __init__(self,D_in,D_out):
-        super(Fianso,self).__init__()
-        self.linear = torch.nn.Linear(D_in,D_out)
-        #self.activ = 
-    def forward(self,x):
-
-        y = self.linear(x)
-
-        return y 
+#         return y 
 
 
 
 
-# Utilisation d'un optimiseur
+# # Utilisation d'un optimiseur
 
-criterion = torch.nn.MSELoss()
-learning_rate = 10e-3
-model = Fianso(x.size()[1],x.size()[0])
-optimizer = torch.optim.Adam(model.parameters(),lr=learning_rate)
+# criterion = torch.nn.MSELoss()
+# learning_rate = 10e-3
+# model = Fianso(x.size()[1],x.size()[0])
+# optimizer = torch.optim.Adam(model.parameters(),lr=learning_rate)
 
-for i in range(1000 ):
+# for i in range(1000 ):
 
-    model.train()
-    pred = model(x)
-    loss = criterion(pred,y)
+#     model.train()
+#     pred = model(x)
+#     loss = criterion(pred,y)
 
-    print('loss :',loss)
-    print("y predit :",pred," y_true :",y)
-    loss.backward()
-    optimizer.step()
-    optimizer.zero_grad()
+#     print('loss :',loss)
+#     print("y predit :",pred," y_true :",y)
+#     loss.backward()
+#     optimizer.step()
+#     optimizer.zero_grad()
 
 
 
@@ -146,18 +142,11 @@ class Perceval(torch.nn.Module):
         
 
     def forward(self,x):
-
         y = self.linear1(x)
-
         y = self.activ1(y)
-
         y = self.linear2(y)#.squeeze()
-
         y = self.activ1(y)
-
         y = self.linear3(y)
-        
-
         return y 
 
 
@@ -167,7 +156,7 @@ validation_split = .2
 random_seed = 42
 
 n_epoch = 500
-learning_rate = 10e-4
+learning_rate = 10e-3
 dataset = Boston_Dataset()
 dataloader = data.DataLoader(dataset,shuffle=shuffle_dataset,batch_size=batch_size) 
 
@@ -210,13 +199,24 @@ for ep in range(n_epoch):
         x = x#.double()
         
         pred = model(x)
-        #print(pred)
+        print(pred)
         loss = criterion(pred, y)
-        print('loss', loss ," Prédiction : ", pred, "y True : ",y)
+        # print('loss', loss ," Prédiction : ", pred, "y True : ",y)
         writer.add_scalar('Loss/train', loss, ep)
         loss.backward()
         optimizer.step()
         optimizer.zero_grad()
+        
+    for i,(x,y) in enumerate(validation_loader):
+        with torch.no_grad():
+            model.eval()
+            pred = model(x)
+            loss = criterion(pred,y)
+            # print('loss', loss ," Prédiction : ", pred, "y True : ",y)
+            writer.add_scalar('Loss/validation', loss, ep)
+
+
+
 
 # à faire : standardisation des données : -mean/std sur le train et sur les ypred du train
 #                                           en test utilisé les moyennes et ecart types calculés dans le train
@@ -224,11 +224,3 @@ for ep in range(n_epoch):
 # Split train/test
 print("-------------------- TEST DU RESEAU DE NEURONES --------------")
 
-
-for ep in range(n_epoch):
-    for i,(x,y) in enumerate(validation_loader):
-
-        pred = model(x)
-        loss = criterion(pred,y)
-        print('loss', loss ," Prédiction : ", pred, "y True : ",y)
-        writer.add_scalar('Loss/validation', loss, ep)
