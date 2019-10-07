@@ -5,6 +5,7 @@ import torch
 from torch.autograd import Function
 from torch.autograd import gradcheck
 from datamaestro import prepare_dataset 
+from torch.utils import data
 
 class Boston_Dataset(data.Dataset):
     def __init__(self,file_path="/Users/ykarmim/Documents/Cours/Master/M2/AMAL/TME/tme1/housing.data"):
@@ -41,43 +42,45 @@ class Context:
         return self._saved_tensors
 
 
+
 class MaFonction(Function):
     @staticmethod
     def forward(ctx,input):
         ctx.save_for_backward(input)
-        return None
+        return input
 
     @staticmethod
     def backward(ctx,grad_output):
         input = ctx.saved_tensors
-        return None
+        return grad_output.mm(input)
 
 
-## Exemple d'implementation de fonction a 2 entrées
-class MaFonction:
+## Exemple d'implementation de fonction a 2 entrÃ©es
+class MaFonction(Function):
     @staticmethod
     def forward(ctx,x,w):
         ## Calcul la sortie du module
         ctx.save_for_backward(x,w)
-        return None
+        return x.mm(w.t())
 
     @staticmethod
     def backward(ctx, grad_output):
-        ## Calcul du gradient du module par rapport a chaque groupe d'entrées
+        ## Calcul du gradient du module par rapport a chaque groupe d'entrÃ©es
         x,w = ctx.saved_tensors
-        return None, None
+        return grad_output.mm(w), grad_output.t().mm(x)
+
 
 ## Pour utiliser la fonction 
-mafonction = MaFonction()
-ctx = Context()
-output = mafonction.forward(ctx,x,w)
-mafonction_grad = mafonction.backward(ctx,1)
+#mafonction = MaFonction()
+#ctx = Context()
+#output = mafonction.forward(ctx,x,w)
+#mafonction_grad = mafonction.backward(ctx,1)
 
 ## Pour tester le gradient 
 mafonction_check = MaFonction.apply
 x = torch.randn(10,5,requires_grad=True,dtype=torch.float64)
 w = torch.randn(1,5,requires_grad=True,dtype=torch.float64)
-torch.autograd.gradcheck(mafonction_check,(x,w))
+print(torch.autograd.gradcheck(mafonction_check,(x,w)))
 
 ## Pour telecharger le dataset Boston
 ds=prepare_dataset("edu.uci.boston")
