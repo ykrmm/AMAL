@@ -1,5 +1,7 @@
 import torch
-
+"""
+    Yannis Karmim et Marc Treu
+"""
 
 class Highway(torch.nn.Module):
 

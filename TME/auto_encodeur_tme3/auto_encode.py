@@ -3,7 +3,7 @@
 """
 Created on Tue Oct  1 09:14:23 2019
 
-@author: 3775070
+auteurs : Yannis Karmim & Marc Treu
 """
 
 

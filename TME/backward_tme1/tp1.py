@@ -1,6 +1,8 @@
 # Ne pas oublier d'executer dans le shell avant de lancer python :
 # source /users/Enseignants/piwowarski/venv/amal/3.7/bin/activate
-
+"""
+    Auteur : Yannis Karmim Marc Treu 
+"""
 import torch
 from torch.autograd import Function
 from torch.autograd import gradcheck
