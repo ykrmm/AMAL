@@ -62,12 +62,9 @@ class Mnist_dataset(Dataset):
         axarr[0].imshow(xtrue)
         axarr[1].set_title('output autoencoder')
         axarr[1].imshow(prediction)
-        if save:
-            if fname is not None :
-                path = os.path.join('figures',fname)
-                plt.savefig(path)
-            else:
-                print('fname=\'string\' required.')
+        if fname is not None :
+            path = os.path.join('figures',fname)
+            plt.savefig(path)
 
 
 class Autoencodeur(torch.nn.Module):
@@ -103,7 +100,9 @@ class State:
         self.epoch , self.iteration = 0,0
 """
 
+
 if __name__ == '__main__':
+    
 
     ds = prepare_dataset("com.lecun.mnist")
     train_images ,  train_labels = ds.files["train/images" ].data(), ds.files["train/labels"].data()
@@ -120,13 +119,13 @@ if __name__ == '__main__':
     savepath = "save_net/auto_encoder.model"
 
     
-    model = Autoencodeur(784,80)
+    model = Autoencodeur(784,120)
     model = model.double() # Sinon bug... Jsp pourquoi
     learning_rate= 10e-4 
     optimizer = torch.optim.Adam(model.parameters(),lr=learning_rate)
     #state = State(model,optimizer)    
     criterion = torch.nn.BCELoss()
-    epoch = 50
+    epoch = 30
     print(" ------------ ENTRAINEMENT RESEAU DE NEURONES ---------------")
     for ep in range(epoch):
         print("EPOCHS : ",ep)
@@ -157,10 +156,10 @@ if __name__ == '__main__':
         print("something wrong with torch.save(model.state_dict(),savepath)")
 
 
-    # Affichage image 
+    # Affichage image
     index = random.randint(0,len(test_images))
     x_to_pred = dataset_test.data[index]
     with torch.no_grad():
         model.eval()
         pred = model(x_to_pred)
-    dataset_test.compare_images(index,pred,save=True,fname='test2.png')
+    dataset_test.compare_images(index,pred,save=True,fname='test5.png')
