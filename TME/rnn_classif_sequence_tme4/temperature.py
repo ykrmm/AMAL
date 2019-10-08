@@ -38,9 +38,12 @@ class Temperature_dataset(Dataset):
         data =[]
         labels = []
         for ville in self.list_label:
-            data.append(list(self.temp_data_df[ville].values))
-            labels.append(list((ville==self.list_label).astype(int))) # Encodage one-hot des classes
+            y = list((ville==self.list_label).astype(int))
+            for x in list(self.temp_data_df[ville].values):
+                data.append(x)
+                labels.append(y) # Encodage one-hot des classes
         self.data = torch.Tensor(data)
+        #self.data = self.data.double()
         self.labels = torch.Tensor(labels)
 
     def __getitem__(self, index):
@@ -65,16 +68,21 @@ class RNN(torch.nn.Module):
         self.d_h = d_h
 
     def one_step(self,x):
-        self.h.append(self.activ(self.W(torch.cat((self.h[self.t],x),0))))
+        #print("x",x.size())
+        #print("h",self.h[self.t].size())
+        self.h.append(self.activ(self.W((torch.cat((self.h[self.t],x.view(1,self.batch_size)),0)).T)))
 
     def forward(self,seq):
         self.h = [torch.zeros((self.d_h,self.batch_size))]
-        t = 0
-
-        for batch in seq : 
-            self.one_step(batch)
-            t+=1
+        self.t = 0
+        #print(seq)
+        
+        self.one_step(seq)
+        self.t+=1
+        print(self.h)
+        print(self.h[0])
         self.h = torch.Tensor(self.h)
+        
         return self.h
 
 
@@ -83,24 +91,29 @@ if __name__ == '__main__':
 
 
     dataset = Temperature_dataset()
-    batch_size = 25
-    data_loader = DataLoader(dataset,shuffle=True,batch_size=batch_size)
+    batch_size = 57 
+    
+    """array([    1,     3,     5,     9,    13,    15,    19,    39,    45,
+          57,    65,    95,   117,   171,   195,   247,   285,   585,
+         741,   855,  1235,  2223,  3705, 11115]) Choisir une de ces batch_size pour éviter de prendre des séquences diff"""
+    data_loader = DataLoader(dataset,shuffle=False,batch_size=batch_size)
     writer = SummaryWriter()
 
-    savepath = "save_net/auto_encoder.model"
+    savepath = "save_net/rnn_temperature.model"
 
-    
+    dimx =  1
+    dimh = 30
     model = RNN(dimx,dimh,batch_size)
-    model = model.double() # Sinon bug... Jsp pourquoi
+     # Sinon bug... Jsp pourquoi
     learning_rate= 10e-4 
     optimizer = torch.optim.Adam(model.parameters(),lr=learning_rate)
     #state = State(model,optimizer)    
     criterion = torch.nn.CrossEntropyLoss()
-    epoch = 30
+    epoch = 100
     print(" ------------ ENTRAINEMENT RESEAU DE NEURONES ---------------")
     for ep in range(epoch):
         print("EPOCHS : ",ep)
-        for i, (x, y) in enumerate(train_loader):
+        for i, (x, y) in enumerate(data_loader):
             model.train()
             pred = model(x).double()
             #print(pred)
@@ -111,7 +124,7 @@ if __name__ == '__main__':
             optimizer.step()
             optimizer.zero_grad()
             
-            
+        """  
         for i,(x,y) in enumerate(test_loader):
             with torch.no_grad():
                 model.eval()
@@ -119,7 +132,7 @@ if __name__ == '__main__':
                 pred = model(x)
                 loss = criterion(pred.double(),x.double())
                 # print('loss', loss ," Prédiction : ", pred, "y True : ",y)
-                writer.add_scalar('Loss/test', loss, ep)
+                writer.add_scalar('Loss/test', loss, ep)"""
     try:
         torch.save(model.state_dict(), savepath)
         print("model successfully saved in",savepath)
@@ -127,13 +140,6 @@ if __name__ == '__main__':
         print("something wrong with torch.save(model.state_dict(),savepath)")
 
 
-    # Affichage image
-    index = random.randint(0,len(test_images))
-    x_to_pred = dataset_test.data[index]
-    with torch.no_grad():
-        model.eval()
-        pred = model(x_to_pred)
-    dataset_test.compare_images(index,pred,save=True,fname='test5.png')
 
 
 
