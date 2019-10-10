@@ -81,7 +81,7 @@ class RNN(torch.nn.Module):
         self.t+=1
         print(self.h)
         print(self.h[0])
-        self.h = torch.Tensor(self.h)
+        self.h = torch.Tensor(self.h) # Problème sur une liste de tenseurs
         
         return self.h
 
