@@ -14,6 +14,7 @@ from torch.autograd import Function
 from torch.autograd import gradcheck
 import torchvision
 from torch.utils.tensorboard import SummaryWriter
+from sklearn.model_selection import train_test_split
 import matplotlib.pyplot as plt
 import os
 import numpy as np
@@ -28,27 +29,77 @@ class Ville:
 
 
 
-class Temperature_dataset(Dataset):
+class Temperature_dataset:
 
-    def __init__(self, path_temp_csv ="data/tempAMAL_train.csv"):
-
+    def __init__(self, path_temp_csv ="data/tempAMAL_train.csv",keep_n_columns=5,seq_length=30,test_size=0.2):
+        """
+            keep_n_columns : number of town we want to keep to train our model
+        """
+        self.seq_length = seq_length
         self.temp_data_df = pd.read_csv(path_temp_csv)
-        self.list_label = self.temp_data_df.columns[1:].values
+        print(self.temp_data_df.columns)
+        self.temp_data_df.drop('datetime',inplace=True,axis=1) # delete datetime
+        self.temp_data_df.drop(self.temp_data_df.columns[keep_n_columns:],inplace=True,axis=1) # keep the n first columns in the dataset
+        self.list_label = self.temp_data_df.columns.values # array labels 
         self.temp_data_df = self.temp_data_df.fillna(self.temp_data_df.mean()) # remplace NaN
-        data =[]
-        labels = []
+        
+        self.train_df, self.test_df = train_test_split(self.temp_data_df, test_size=test_size) # Split train_test
+        self.data_train =[]
+        self.labels = []
         for ville in self.list_label:
-            y = list((ville==self.list_label).astype(int))
-            for x in list(self.temp_data_df[ville].values):
-                data.append(x)
-                labels.append(y) # Encodage one-hot des classes
-        self.data = torch.Tensor(data)
-        #self.data = self.data.double()
-        self.labels = torch.Tensor(labels)
+            self.labels.append(list((ville==self.list_label).astype(int)))
+            self.data_train.append(list(self.train_df[ville].values))
+        #self.data_train = torch.Tensor(data_train)
+        
+        #self.labels = torch.Tensor(labels) # meme labels train test relié aux columns des data
+        
+        self.data_test =[]
+        for ville in self.list_label:
+            self.data_test.append(list(self.test_df[ville].values))
+        #self.data_test = torch.Tensor(data_train)
 
-    def __getitem__(self, index):
 
-        return self.data[index], self.labels[index]
+    def construct_batch(self, batch_size = 50):
+        all_batch_train_data = []
+        all_batch_train_labels = []
+        for _ in range(len(self.data_train[0])/batch_size):
+            batch_data = []
+            batch_label = []
+            for _ in range(batch_size):
+                ind_ville = np.random.randint(len(self.labels))
+                debut = np.random.randint(len(self.data_train[ind_ville]))
+                if  len(self.data_train[ind_ville]) - debut < self.seq_length:
+                    batch_data.append(self.data_train[debut-self.seq_length:debut])
+                else:
+                    batch_data.append(self.data_train[debut:debut+self.seq_length])
+                batch_label.append(self.labels[ind_ville])
+            all_batch_train_data.append(batch_data)
+            all_batch_train_labels.append(batch_label)
+        self.all_batch_train_data = torch.Tensor(all_batch_train_data)
+        self.all_batch_train_labels = torch.Tensor(all_batch_train_labels)
+        
+        
+        all_batch_test_data = []
+        all_batch_test_labels = []
+        for _ in range(len(self.data_test[0])/batch_size):
+            batch_data = []
+            batch_label = []
+            for _ in range(batch_size):
+                ind_ville = np.random.randint(len(self.labels))
+                debut = np.random.randint(len(self.data_test[ind_ville]))
+                if  len(self.data_test[ind_ville]) - debut < self.seq_length:
+                    batch_data.append(self.data_test[debut-self.seq_length:debut])
+                else:
+                    batch_data.append(self.data_test[debut:debut+self.seq_length])
+                batch_label.append(self.labels[ind_ville])
+            all_batch_test_data.append(batch_data)
+            all_batch_test_labels.append(batch_label)
+        self.all_batch_test_data = torch.Tensor(all_batch_test_data)
+        self.all_batch_test_labels = torch.Tensor(all_batch_test_labels)
+
+
+        
+        
 
     def __len__(self):
 
