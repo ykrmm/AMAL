@@ -62,48 +62,49 @@ class Temperature_dataset:
     def construct_batch(self, batch_size = 50):
         all_batch_train_data = []
         all_batch_train_labels = []
-        for _ in range(len(self.data_train[0])/batch_size):
+        for _ in range(len(self.data_train[0])//10):
             batch_data = []
             batch_label = []
             for _ in range(batch_size):
                 ind_ville = np.random.randint(len(self.labels))
-                debut = np.random.randint(len(self.data_train[ind_ville]))
+                debut = np.random.randint(len(self.data_train[0]))
                 if  len(self.data_train[ind_ville]) - debut < self.seq_length:
-                    batch_data.append(self.data_train[debut-self.seq_length:debut])
+                    print('av')
+                    batch_data.append(self.data_train[ind_ville][debut-self.seq_length:debut])
+                    print(batch_data)
                 else:
-                    batch_data.append(self.data_train[debut:debut+self.seq_length])
+                    batch_data.append(self.data_train[ind_ville][debut:debut+self.seq_length])
                 batch_label.append(self.labels[ind_ville])
             all_batch_train_data.append(batch_data)
             all_batch_train_labels.append(batch_label)
         self.all_batch_train_data = torch.Tensor(all_batch_train_data)
         self.all_batch_train_labels = torch.Tensor(all_batch_train_labels)
         
+        self.all_batch_train=(self.all_batch_train_data,self.all_batch_train_labels)
         
         all_batch_test_data = []
         all_batch_test_labels = []
-        for _ in range(len(self.data_test[0])/batch_size):
+        for _ in range(len(self.data_test[0])//10):
             batch_data = []
             batch_label = []
             for _ in range(batch_size):
                 ind_ville = np.random.randint(len(self.labels))
                 debut = np.random.randint(len(self.data_test[ind_ville]))
                 if  len(self.data_test[ind_ville]) - debut < self.seq_length:
-                    batch_data.append(self.data_test[debut-self.seq_length:debut])
+                    batch_data.append(self.data_test[ind_ville][debut-self.seq_length:debut])
                 else:
-                    batch_data.append(self.data_test[debut:debut+self.seq_length])
+                    batch_data.append(self.data_test[ind_ville][debut:debut+self.seq_length])
                 batch_label.append(self.labels[ind_ville])
             all_batch_test_data.append(batch_data)
             all_batch_test_labels.append(batch_label)
         self.all_batch_test_data = torch.Tensor(all_batch_test_data)
         self.all_batch_test_labels = torch.Tensor(all_batch_test_labels)
 
+        self.all_batch_test=(self.all_batch_test_data,self.all_batch_test_labels)
 
+        return self.all_batch_train,self.all_batch_test
         
-        
 
-    def __len__(self):
-
-        return len(self.labels)
 
     
 
@@ -141,19 +142,13 @@ if __name__ == '__main__':
     
 
 
-    dataset = Temperature_dataset()
-    batch_size = 57 
-    
-    """array([    1,     3,     5,     9,    13,    15,    19,    39,    45,
-          57,    65,    95,   117,   171,   195,   247,   285,   585,
-         741,   855,  1235,  2223,  3705, 11115]) Choisir une de ces batch_size pour éviter de prendre des séquences diff"""
-    data_loader = DataLoader(dataset,shuffle=False,batch_size=batch_size)
+    dataset = Temperature_dataset(seq_length=30)
+    batch_size = 50
+    batch_train,batch_test = dataset.construct_batch(batch_size=batch_size)
     writer = SummaryWriter()
 
     savepath = "save_net/rnn_temperature.model"
 
-    dimx =  1
-    dimh = 30
     model = RNN(dimx,dimh,batch_size)
      # Sinon bug... Jsp pourquoi
     learning_rate= 10e-4 
