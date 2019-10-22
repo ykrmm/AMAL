@@ -20,45 +20,32 @@ import os
 import numpy as np
 import random
 #############
-class Ville:
-    def __init__(self,path_csv_ville = "data/city_attributes.csv"):
-        self.ville_df = pd.read_csv(path_csv_ville)
+# Loss reduction = None
+# colalte_fn pour avoir des tailles fixes de batch. 
+# On doit mettre une fin de séquence <eos> caractère à prendre compte dans l'apprentissage.
 
-    def get_df(self):
-        return self.ville_df
+class Trump_dataset(Dataset):
 
-
-
-class Temperature_dataset:
-
-    def __init__(self, path_temp_csv ="data/tempAMAL_train.csv",keep_n_columns=5,seq_length=30,test_size=0.2):
+    def __init__(self, file ="trump_full_speech.txt",dim_embeddings=300):
         """
             keep_n_columns : number of town we want to keep to train our model
         """
-        self.seq_length = seq_length
-        self.temp_data_df = pd.read_csv(path_temp_csv)
-        print(self.temp_data_df.columns)
-        self.temp_data_df.drop('datetime',inplace=True,axis=1) # delete datetime
-        self.temp_data_df.drop(self.temp_data_df.columns[keep_n_columns:],inplace=True,axis=1) # keep the n first columns in the dataset
-        self.list_label = self.temp_data_df.columns.values # array labels 
-        self.temp_data_df = self.temp_data_df.fillna(self.temp_data_df.mean()) # remplace NaN
-        
-        self.train_df, self.test_df = train_test_split(self.temp_data_df, test_size=test_size) # Split train_test
-        self.data_train =[]
-        self.labels = []
-        for ville in self.list_label:
-            self.labels.append(list((ville==self.list_label).astype(int)))
-            self.data_train.append(list(self.train_df[ville].values))
-        #self.data_train = torch.Tensor(data_train)
-        
-        #self.labels = torch.Tensor(labels) # meme labels train test relié aux columns des data
-        
-        self.data_test =[]
-        for ville in self.list_label:
-            self.data_test.append(list(self.test_df[ville].values))
-        #self.data_test = torch.Tensor(data_train)
+        f = open("trump_full_speech.txt","r").read().split() 
+        dict_word = {}
+
+        for word in f: 
+            dict_word.setdefault(word,torch.zeros(dim_embeddings)) # on veut des lettres
 
 
+    def normalize(s):
+        return ''.join(c for c in unicodedata.normalize('NFD',s) if c in LETTRES)
+
+    def string2code(s):
+        return torch.tensor([lettre2id[c] for c in normalize(s)])
+    def code2string(t):
+        if type(t) != list:
+            t = t.tolist()
+        return ''.join(id2lettre[i] for i in t)
     def construct_batch(self, batch_size = 50):
         all_batch_train_data = []
         all_batch_train_labels = []
@@ -109,32 +96,33 @@ class Temperature_dataset:
     
 
 
-class RNN(torch.nn.Module):
+class MY_LSTM(torch.nn.Module):
 
-    def __init__(self, d_in_x, d_h,batch_size):
-
-        super(RNN, self).__init__()
-        self.Wh = torch.nn.Linear(d_in_x + d_h,d_h)
-        self.Wx = torch.nn.Linear()
-        self.activ = torch.nn.Tanh()
-        self.batch_size = batch_size
-        self.d_h = d_h
+    def __init__(self, dimx, dimh,batch_size):
+        # dim x = embeddings shape
+        super(MY_LSTM, self).__init__()
+        self.Wf = torch.nn.Linear(dimx+dimh,dimh)
+        self.Wi = torch.nn.Linear(dimx+dimh,dimh)
+        self.Wo = torch.nn.Linear(dimx+dimh,dimh)
+        self.Wc = torch.nn.Linear(dimx+dimh,dimh)
+        self.tanh = torch.nn.Tanh()
+        self.sigmoid = torch.nn.Sigmoid()
+        self.Ct = torch.zeros(dimh)
+        self.ht = torch.zeros(dimh)
+        self.h = torch.zeros(dimh)
 
     def one_step(self,x):
-        #print("x",x.size())
-        #print("h",self.h[self.t].size())
-        self.h.append(self.activ(self.W((torch.cat((self.h[self.t],x.view(1,self.batch_size)),0)).T)))
+        x_ht = torch.cat((self.ht,x),0)
+        ft = self.sigmoid(self.Wf(x_ht))
+        it = self.sigmoid(self.Wi(x_ht))
+        self.Ct = ft*self.Ct + it * self.tanh(self.Wc(x_ht))
+        ot = self.sigmoid(self.Wo(x_ht))
+        self.ht = ot * self.tanh(self.Ct) # Est ce qu'on doit garder en memoire h ? 
+        self.h = self.h.cat((self.h,self.ht))
 
     def forward(self,seq):
-        self.h = [torch.zeros((self.d_h,self.batch_size))]
-        self.t = 0
-        #print(seq)
-        
-        self.one_step(seq)
-        self.t+=1
-        print(self.h)
-        print(self.h[0])
-        self.h = torch.Tensor(self.h) # Problème sur une liste de tenseurs
+        for x in seq:
+            self.one_step(x)
         
         return self.h
 
