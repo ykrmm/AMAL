@@ -69,9 +69,7 @@ class Temperature_dataset:
                 ind_ville = np.random.randint(len(self.labels))
                 debut = np.random.randint(len(self.data_train[0]))
                 if  len(self.data_train[ind_ville]) - debut < self.seq_length:
-                    print('av')
-                    batch_data.append(self.data_train[ind_ville][debut-self.seq_length:debut])
-                    print(batch_data)
+                    batch_data.append(self.data_train[ind_ville][debut-self.seq_length:debut])                
                 else:
                     batch_data.append(self.data_train[ind_ville][debut:debut+self.seq_length])
                 batch_label.append(self.labels[ind_ville])
@@ -114,29 +112,25 @@ class RNN(torch.nn.Module):
     def __init__(self, d_in_x, d_h,batch_size):
 
         super(RNN, self).__init__()
-        self.Wh = torch.nn.Linear(d_in_x + d_h,d_h)
-        self.Wx = torch.nn.Linear()
+        self.Wh = torch.nn.Linear(batch_size*d_h,batch_size*d_h)
+        self.Wx = torch.nn.Linear(batch_size*d_in_x,batch_size*d_h)
         self.activ = torch.nn.Tanh()
         self.batch_size = batch_size
         self.d_h = d_h
-
+        self.ht = torch.zeros(batch_size*d_h,dtype=torch.double)
+        self.h = torch.zeros(batch_size*d_h,dtype=torch.double)
     def one_step(self,x):
-        #print("x",x.size())
-        #print("h",self.h[self.t].size())
-        self.h.append(self.activ(self.W((torch.cat((self.h[self.t],x.view(1,self.batch_size)),0)).T)))
+        s1 = self.Wh(self.ht.double()).double()
+        s2 = self.Wx(x)
+        self.ht = s1 +s2
+        self.h = torch.cat((self.h,self.ht),0)
 
     def forward(self,seq):
-        self.h = [torch.zeros((self.d_h,self.batch_size))]
-        self.t = 0
-        #print(seq)
         
-        self.one_step(seq)
-        self.t+=1
-        print(self.h)
-        print(self.h[0])
-        self.h = torch.Tensor(self.h) # Problème sur une liste de tenseurs
+        for x in range(len(seq[0])):
+            self.one_step(seq[:,x])
         
-        return self.h
+        return self.ht
 
 
 if __name__ == '__main__':
@@ -150,7 +144,7 @@ if __name__ == '__main__':
 
     savepath = "save_net/rnn_temperature.model"
 
-    dim_h = 20
+    dim_h = 5 # Longueur de sortie 
     dim_x = 1 
     model = RNN(dim_x,dim_h,batch_size)
      # Sinon bug... Jsp pourquoi
@@ -162,25 +156,24 @@ if __name__ == '__main__':
     print(" ------------ ENTRAINEMENT RESEAU DE NEURONES ---------------")
     for ep in range(epoch):
         print("EPOCHS : ",ep)
-        for i, (x, y) in enumerate(batch_train):
+        data,label = batch_train
+        for i, x in enumerate(data):
             model.train()
             pred = model(x)
-            #print(pred)
-            loss = criterion(pred.double(), x.double())
+            loss = criterion(pred, label[i])
             writer.add_scalar('Loss/train', loss, ep)
             loss.backward()
             optimizer.step()
             optimizer.zero_grad()
             
-        """  
-        for i,(x,y) in enumerate(test_loader):
+        data,label = batch_test
+        for i,x in enumerate(data):
             with torch.no_grad():
-                model.eval()
-                
+                model.eval()             
                 pred = model(x)
-                loss = criterion(pred.double(),x.double())
-                # print('loss', loss ," Prédiction : ", pred, "y True : ",y)
-                writer.add_scalar('Loss/test', loss, ep)"""
+                loss = criterion(pred,label[i])
+                writer.add_scalar('Loss/test', loss, ep)
+
     try:
         torch.save(model.state_dict(), savepath)
         print("model successfully saved in",savepath)
