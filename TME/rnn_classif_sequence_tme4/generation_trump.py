@@ -7,19 +7,19 @@ auteurs : Yannis Karmim & Marc Treu
 """
 
 import pandas as pd
-from datamaestro import prepare_dataset
 import torch
 from torch.utils.data import Dataset, DataLoader
 from torch.autograd import Function
 from torch.autograd import gradcheck
 import torchvision
 from torch.utils.tensorboard import SummaryWriter
-from sklearn.model_selection import train_test_split
 import matplotlib.pyplot as plt
 import os
 import numpy as np
 import string
 import unicodedata
+import warnings
+warnings.filterwarnings("ignore")
 #############
 """
 Génération de séquence sur des données de discours de Trump.
@@ -27,10 +27,16 @@ Génération de séquence sur des données de discours de Trump.
 
 class Trump_dataset:
     def __init__(self,file_trump="data/trump_full_speech.txt"):
+
+        with open(file_trump) as f:
+            self.speech = f.read()
         self.LETTRES = string.ascii_letters+string.punctuation+string.digits+' '
         self.id2lettre = dict(zip(range(1,len(self.LETTRES)+1),self.LETTRES))
         self.id2lettre[0] = '' ##NULL CHARACTER
         self.lettre2id = dict(zip(self.id2lettre.values(),self.id2lettre.keys()))
+        self.speech = self.normalize(self.speech)
+        self.code_speech = self.string2code(self.speech)
+        self.one_hot = self.one_hot_encoding(self.code_speech) # First we encode our char as one hot encoder type.
 
     def normalize(self,s):
         return ''.join(c for c in unicodedata.normalize('NFD',s)if c in self.LETTRES)
@@ -42,9 +48,63 @@ class Trump_dataset:
         if type(t) != list:
             t = t.tolist()
         return ''.join(self.id2lettre[i]for i in t)
+    def one_hot_encoding(self,code):
+        one_hot = torch.zeros((len(code),len(self.id2lettre)),requires_grad=True,dtype=torch.double)
+        for i in range(len(code)):
+            one_hot[i][int(code[i])]=1
+
+        return one_hot    
 
 
-    
+
+class Trump_Encodeur(torch.nn.Module):
+
+    def __init__(self,vocab_size,emb_size):
+        super(Trump_Encodeur,self).__init__()
+        self.Wh = torch.nn.Linear(d_h,d_h) # Couche de la représentation latente h 
+        self.Wx = torch.nn.Linear(d_in_x,d_h) # Couche entrante de X
+        self.Wo = torch.nn.Linear(d_h,d_out) # Couche de sortie (celle qui va prédire la température)
+        self.activ = torch.nn.Tanh() # Activation entre les h, on utilise pas de couche d'activation pour la sortie. 
+        self.batch_size = batch_size
+        self.d_h = d_h
+        self.d_in_x = d_in_x
+        self.d_out = d_out
+        #self.ht = torch.zeros((batch_size,d_h),requires_grad=True,dtype=torch.double) # representation h courante
+        #self.h = torch.zeros((batch_size,d_h),requires_grad=True,dtype=torch.double) # tout nos h gardés en mémoire
+        #self.ot = torch.zeros((batch_size,d_out),requires_grad=True,dtype=torch.double) # La sortie courante notre température prédit
+        #self.o = torch.zeros((batch_size,d_out),requires_grad=True,dtype=torch.double) # Toute nos sorties gardées en mémoire.
+        
+
+    def one_step(self,x):
+        x = x.double()
+        self.x = x
+        x = x.view((self.batch_size,self.d_in_x))
+        s1 = self.Wh(self.ht)
+        s2 = self.Wx(x)
+        self.ht = self.activ(s1 +s2) # activation entre nos cellules du réseau 
+        self.h = torch.cat((self.h,self.ht),1)
+        self.ot = self.Wo(s1 + s2) # pas d'activation pour la sortie 
+        self.o = torch.cat((self.o,self.ot),1)
+
+    def forward(self,seq):
+        
+        self.ht = torch.zeros((self.batch_size,self.d_h),requires_grad=True,dtype=torch.double) # representation h courante
+        self.h = torch.zeros((self.batch_size,self.d_h),requires_grad=True,dtype=torch.double) # tout nos h gardés en mémoire 
+        self.ot = torch.zeros((self.batch_size,self.d_out),requires_grad=True,dtype=torch.double) # La sortie courante notre température prédit
+        self.o = torch.zeros((self.batch_size,self.d_out),requires_grad=True,dtype=torch.double) # Toute nos sorties gardées en mémoire
+        for x in range(len(seq[0])):
+            self.one_step(seq[:,x])
+        return self.o
+
+
+
+
+class Trump_Decodeur(torch.nn.Module):
+
+    def __init__(self,emb_size):
+        super(Trump_Decodeur,self).__init__()
+
+
 
 
 class RNN(torch.nn.Module):
@@ -91,12 +151,13 @@ if __name__ == '__main__':
     
 
 
-    dataset = Temperature_dataset(seq_length=30)
+    dataset = Trump_dataset()
+    """
     batch_size = 100
     batch_train,batch_test = dataset.construct_batch(batch_size=batch_size)
     writer = SummaryWriter()
 
-    savepath = "savenet/rnn_temperature.model"
+    savepath = "savenet/rnn_gen_trump.model"
 
     dim_h = 10 # Taille des représentations internes des cellules du réseaux
     dim_o = 1 # Dimension de sortie du réseau 
@@ -162,7 +223,7 @@ if __name__ == '__main__':
         print("model successfully saved in",savepath)
     except:
         print("something wrong with torch.save(model.state_dict(),savepath)")
-
+    """
 
 
 

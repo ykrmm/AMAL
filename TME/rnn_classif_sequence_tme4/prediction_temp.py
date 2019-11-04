@@ -45,6 +45,7 @@ class Temperature_dataset:
         """
             keep_n_columns : number of town we want to keep to train our model
         """
+        # Il faut normaliser les températures.
         self.seq_length = seq_length
         self.temp_data_df = pd.read_csv(path_temp_csv)
         print(self.temp_data_df.columns)
