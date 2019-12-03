@@ -64,9 +64,9 @@ class MNIST_nn(nn.Module):
 
 if __name__ == "__main__":
 
-    n_epoch = 100
+    n_epoch = 1000
     learning_rate = 10e-3
-    batch_size = 40
+    batch_size = 300
     train,val = get_dataset(batch_size)
 
 
