@@ -1,22 +1,22 @@
 # AMAL: Advanced MAchine Learning & Deep Learning
 
-Cette UE vise à aborder les concepts suivants:
+The aim of this course is to cover the following concepts:
 
-### Introduction au deep learning: Cours, TD & TP autour des architectures de l’état de l’art.
-* Architectures de réseaux de neurones profonds
-* Réseaux à convolution, réseaux récurrents
-* Modèles d’attention
-* Graphes de calcul et auto-différentiation
-* Formation aux outils de l’état de l’art: pytorch & tensor flow
+### Introduction to deep learning: Course and experimentations on state of the art architectures.
+* Deep neural Network architectures
+* Convolutional neural network, reccurents neural network.
+* Attention models.
+* Computational graph and autograd.
+* Framework for deeplearning: pytorch, tensor flow and CUDA programmation.
 
-### Approfondissement des concepts fondateurs du machine learning
-* Théorie de l’apprentissage statistique, capacité de généralisation, dilemme biais-variance, PAC, complexité d’apprentissage ,etc…
-* Apprentissage Supervisé : Classification, Réseaux de Neurones, Machines à vecteurs de support, Méthodes à noyaux, processus Gaussiens, etc…
-* Optimisation
-* Apprentissage non supervisé : Clustering, Factorisation matricielle, Modèles à variables latentes (mélanges, etc)
+### Deepening of the founding concepts of the machine learning
+* Statistical learning theory, generalizability, bias-variance dilemma, PAC, learning complexity, etc.
+* Supervised Learning: Classification, Neural Networks, Support Vector Machines, Kernel Methods, Gaussian Processes, etc...
+* Optimization
+* Unsupervised learning: Clustering, Matrix Factoring, Latent Variable Models (blends, etc.)
 
 
-### Autre paradigmes d’apprentissage :
-* Apprentissage faiblement supervisé, Apprentissage semi-supervisé et transductif, Apprentissage actif,
+### Other learning paradigms :
+* Low supervision learning, Semi-supervised and transductive learning, Active learning,
 * Transfer Learning
-* Apprentissage et données structurées : Séquences et arbres, Graphes et données inter-dépendantes.
+* Learning and structured data: Sequences and trees, Graphs and interdependent data.
